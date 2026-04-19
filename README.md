@@ -1,4 +1,3 @@
-.gvimrc symlinks to .vimrc
+# Dotfiles
 
-excid3 theme goes in .oh-my-zsh/themes
-kitty
+Mostly neovim config, with some basic config stuff that will be versioned for my various workstations
