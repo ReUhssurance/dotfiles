@@ -18,4 +18,9 @@ tags:
 - [ ] placeholder
 
 
+### 3 Things I'm Grateful For
+1.
+2.
+3.
+
 ### Random

@@ -1,4 +1,15 @@
 -- LSP Setup
+
+-- local util = require('lspconfig.util')
+
+-- UV helper function
+local function project_root(fname)
+  local path = fname or vim.api.nvim_buf_get_name(0)
+  local start = vim.fs.dirname(path)
+  local found = vim.fs.find({ "pyproject.toml", "uv.lock", ".git" }, { upward = true, path = start })[1]
+  return found and vim.fs.dirname(found) or vim.loop.cwd()
+end
+
 return {
   {
     -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
@@ -137,7 +148,19 @@ return {
       local servers = {
         gopls = {},
         rust_analyzer = {},
-        -- pyright = {},
+        pyright = {
+          root_dir = project_root,
+          cmd = { "uv", "run", "pyright-langserver", "--stdio" },
+        },
+        gdtoolkit = {},
+        -- basedpyright = {
+        --   root_dir = util.root_pattern("pyproject.toml", ".git"),
+        --   settings = {
+        --     python = {
+        --       pythonPath = get_uv_python(),
+        --     },
+        --   },
+        -- },
         -- tsserver = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -156,6 +179,9 @@ return {
             Lua = {
               completion = {
                 callSnippet = 'Replace',
+              },
+              diagnostics = {
+                globals = { 'love' },
               },
               -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
               -- diagnostics = { disable = { 'missing-fields' } },

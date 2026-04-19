@@ -11,6 +11,8 @@ require('lazy').setup({
   require 'plugins/lualine',
   require 'plugins/git',
   require 'plugins/autopairs',
+  require 'plugins/which-key',
+  require 'plugins/noice',
 
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
   'easymotion/vim-easymotion', -- ,,w tokenizer

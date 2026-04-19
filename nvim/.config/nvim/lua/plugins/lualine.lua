@@ -5,9 +5,9 @@ return {
   },
   config = function()
     require('lualine').setup({
-      options = {
-        theme = 'tokyo-night',
-      },
+      --options = {
+        --theme = 'tokyo-night',
+      --},
     })
   end,
 }
