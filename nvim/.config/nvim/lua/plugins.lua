@@ -1,7 +1,7 @@
 require('lazy').setup({
   require 'plugins/lsp',
-  require 'plugins/treesitter',
   require 'plugins/telescope',
+  require 'plugins/tree-sitter-manager',
   require 'plugins/cmp',
   require 'plugins/neotree',
   require 'plugins/colorscheme',
