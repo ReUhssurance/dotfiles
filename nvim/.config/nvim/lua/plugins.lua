@@ -15,9 +15,10 @@ require('lazy').setup({
   require 'plugins/noice',
 
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
-  'easymotion/vim-easymotion', -- ,,w tokenizer
-  'preservim/nerdcommenter', -- easy commenting maps
-  'ray-x/go.nvim', -- golang
+  {
+    'easymotion/vim-easymotion', -- ,,w tokenizer
+    event = 'VeryLazy',
+  },
 }, {
     ui = {
       -- If you are using a Nerd Font: set icons to an empty table which will use the
@@ -41,13 +42,4 @@ require('lazy').setup({
   }
 )
 
--- Go auto fmt
-local format_sync_grp = vim.api.nvim_create_augroup("GoFormat", {})
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = "*.go",
-  callback = function()
-   require('go.format').goimports()
-  end,
-  group = format_sync_grp,
-})
-require("go").setup()
+
