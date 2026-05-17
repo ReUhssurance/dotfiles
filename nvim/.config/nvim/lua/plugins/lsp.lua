@@ -152,11 +152,12 @@ return {
       local servers = {
         gopls = {},
         rust_analyzer = {},
-        pyright = {
-          root_dir = project_root,
-          cmd = { "uv", "run", "pyright-langserver", "--stdio" },
-        },
-        gdtoolkit = {},
+        pyright = {},
+        -- pyright = {
+        --   root_dir = project_root,
+        --   cmd = { "uv", "run", "pyright-langserver", "--stdio" },
+        -- },
+        -- gdtoolkit = {},
         -- basedpyright = {
         --   root_dir = util.root_pattern("pyproject.toml", ".git"),
         --   settings = {
