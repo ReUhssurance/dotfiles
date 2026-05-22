@@ -90,6 +90,8 @@ return {
           --  For example, in C this would take you to the header.
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
+          -- Show warning text
+          map('gw', vim.diagnostic.open_float, '[G]et [W]arning')
         end,
       })
 
