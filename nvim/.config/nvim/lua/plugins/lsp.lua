@@ -102,6 +102,9 @@ return {
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
+      -- LSPs excluded from Mason install (use system-installed binaries instead)
+      local mason_exclude = { 'dartls' }
+
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -115,6 +118,8 @@ return {
         gopls = {},
         rust_analyzer = {},
         pyright = {},
+        dartls = {},
+        -- dcm = {},
         -- pyright = {
         --   root_dir = project_root,
         --   cmd = { "uv", "run", "pyright-langserver", "--stdio" },
@@ -167,7 +172,11 @@ return {
 
       -- You can add other tools here that you want Mason to install
       -- for you, so that they are available from within Neovim.
-      local ensure_installed = vim.tbl_keys(servers or {})
+      -- exclude LSPs not in Mason registry (dartls uses system Dart SDK)
+      local ensure_installed = {}
+      for name, _ in pairs(servers or {}) do
+        if not vim.tbl_contains(mason_exclude, name) then table.insert(ensure_installed, name) end
+      end
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
       })
@@ -185,6 +194,14 @@ return {
           end,
         },
       }
+
+      -- Set up servers not managed by mason-lspconfig (e.g. dartls)
+      for name, opts in pairs(servers) do
+        if vim.tbl_contains(mason_exclude, name) then
+          opts.capabilities = vim.tbl_deep_extend('force', {}, capabilities, opts.capabilities or {})
+          require('lspconfig')[name].setup(opts)
+        end
+      end
     end,
   },
 }
