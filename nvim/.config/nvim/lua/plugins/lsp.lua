@@ -190,7 +190,8 @@ return {
             -- by the server configuration above. Useful when disabling
             -- certain features of an LSP (for example, turning off formatting for ts_ls)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
+            vim.lsp.config(server_name, server)
+            vim.lsp.enable(server_name)
           end,
         },
       }
@@ -199,7 +200,8 @@ return {
       for name, opts in pairs(servers) do
         if vim.tbl_contains(mason_exclude, name) then
           opts.capabilities = vim.tbl_deep_extend('force', {}, capabilities, opts.capabilities or {})
-          require('lspconfig')[name].setup(opts)
+          vim.lsp.config(name, opts)
+          vim.lsp.enable(name)
         end
       end
     end,
