@@ -102,6 +102,11 @@ return {
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+
+      -- Shortcut for searching all of ~/.config
+      vim.keymap.set('n', '<leader>sc', function()
+        builtin.find_files { cwd = vim.fn.expand '~/.config' }
+      end, { desc = '[S]earch [C]onfig files' })
     end,
   },
 }
