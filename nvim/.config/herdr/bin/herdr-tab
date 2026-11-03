@@ -1,0 +1,113 @@
+#!/usr/bin/python3
+"""0-indexed tab numbering for herdr.
+
+herdr numbers tabs from 1 and hard-codes its indexed keybindings to 1..9, so
+``switch_tab`` cannot reach 0. This drives the socket API instead: tabs are
+addressed by 0-based position and relabelled to match, so the key you press is
+the number on screen.
+
+Commands:
+    focus N   focus the tab at 0-based position N in the active workspace
+    new       create a tab, relabel, and focus it
+    close     close the active tab and relabel the rest
+    sync      relabel every tab in the active workspace to its 0-based position
+"""
+
+import json
+import os
+import subprocess
+import sys
+
+# Absolute, and with the socket pinned: herdr spawns keybinding commands with
+# an environment we do not control. Without PATH a bare "herdr" is not found,
+# and without HOME the CLI resolves its socket under TMPDIR and reports
+# server_not_running — both of which fail silently behind a keypress.
+HERDR = "/Users/evantetzlaff/.local/bin/herdr"
+SOCKET = "/Users/evantetzlaff/.config/herdr/herdr.sock"
+ENV = {**os.environ, "HERDR_SOCKET_PATH": os.environ.get("HERDR_SOCKET_PATH", SOCKET)}
+
+
+def api(*args):
+    proc = subprocess.run([HERDR, *args], capture_output=True, text=True, env=ENV)
+    if proc.returncode != 0:
+        sys.exit(f"herdr-tab: `herdr {' '.join(args)}` failed: {proc.stderr.strip()}")
+    if not proc.stdout.strip():
+        return {}
+    payload = json.loads(proc.stdout)
+    if "error" in payload:
+        sys.exit(f"herdr-tab: {payload['error']}")
+    return payload.get("result", {})
+
+
+def all_tabs():
+    return api("tab", "list")["tabs"]
+
+
+def active_workspace(tabs):
+    ws = os.environ.get("HERDR_ACTIVE_WORKSPACE_ID")
+    if ws:
+        return ws
+    for tab in tabs:
+        if tab.get("focused"):
+            return tab["workspace_id"]
+    sys.exit("herdr-tab: no active workspace")
+
+
+def ordered(tabs, workspace):
+    rows = [t for t in tabs if t["workspace_id"] == workspace]
+    return sorted(rows, key=lambda t: t["number"])
+
+
+def relabel(tabs, workspace):
+    """Rename tabs whose label is a stale position. Leaves custom names alone."""
+    for position, tab in enumerate(ordered(tabs, workspace)):
+        want = str(position)
+        if tab["label"] == want:
+            continue
+        if tab["label"].isdigit():
+            api("tab", "rename", tab["tab_id"], want)
+
+
+def main():
+    argv = sys.argv[1:]
+    if not argv:
+        sys.exit("usage: herdr-tab <focus N|new|close|sync>")
+
+    command, rest = argv[0], argv[1:]
+    tabs = all_tabs()
+    workspace = active_workspace(tabs)
+
+    if command == "sync":
+        relabel(tabs, workspace)
+
+    elif command == "focus":
+        if not rest:
+            sys.exit("usage: herdr-tab focus <0-based position>")
+        try:
+            position = int(rest[0])
+        except ValueError:
+            sys.exit(f"herdr-tab: not a position: {rest[0]}")
+        rows = ordered(tabs, workspace)
+        if 0 <= position < len(rows):
+            api("tab", "focus", rows[position]["tab_id"])
+
+    elif command == "new":
+        created = api("tab", "create", "--workspace", workspace)["tab"]["tab_id"]
+        relabel(all_tabs(), workspace)
+        api("tab", "focus", created)
+
+    elif command == "close":
+        current = os.environ.get("HERDR_ACTIVE_TAB_ID") or next(
+            (t["tab_id"] for t in tabs if t.get("focused")), None
+        )
+        if not current:
+            sys.exit("herdr-tab: no active tab")
+        api("tab", "close", current)
+        relabel(all_tabs(), workspace)
+
+    else:
+        sys.exit(f"herdr-tab: unknown command: {command}")
+
+
+if __name__ == "__main__":
+    main()

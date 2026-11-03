@@ -1,1 +1,6 @@
 .DS_Store
+
+# herdr runtime state — only config.toml and bin/ are versioned
+nvim/.config/herdr/*
+!nvim/.config/herdr/config.toml
+!nvim/.config/herdr/bin/
