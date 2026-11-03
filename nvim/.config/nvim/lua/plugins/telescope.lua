@@ -107,6 +107,23 @@ return {
       vim.keymap.set('n', '<leader>sc', function()
         builtin.find_files { cwd = vim.fn.expand '~/.config' }
       end, { desc = '[S]earch [C]onfig files' })
+
+      local docs_dir = vim.fn.expand '~/work/docs'
+      vim.keymap.set('n', '<leader>sD', function()
+        builtin.live_grep {
+          cwd = docs_dir,
+          prompt_title = 'Search Docs',
+          additional_args = { '--hidden' },
+        }
+      end, { desc = '[S]earch [D]ocs' })
+
+      vim.api.nvim_create_user_command('SearchDocs', function()
+        builtin.live_grep {
+          cwd = docs_dir,
+          prompt_title = 'Search Docs',
+          additional_args = { '--hidden' },
+        }
+      end, { desc = 'Grep ~/work/docs' })
     end,
   },
 }
