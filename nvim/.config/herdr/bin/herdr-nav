@@ -10,11 +10,22 @@
 # Nothing here may depend on the environment. herdr spawns keybinding commands
 # with an environment we do not control: $HOME and $PATH may both be absent,
 # which previously made this exit before it could even log. Every binary and
-# path below is absolute. Create herdr-nav.debug beside config.toml to trace.
+# path below is derived from this script's own location. Create herdr-nav.debug beside config.toml to trace.
 
-HERDR=/Users/evantetzlaff/.local/bin/herdr
-JQ=/usr/bin/jq
-CONFIG_DIR=/Users/evantetzlaff/.config/herdr
+# Locate everything relative to this script rather than hardcoding a home
+# directory, so the same file works on Linux and macOS. cd and pwd are shell
+# builtins, so this needs neither PATH nor HOME. pwd keeps the symlinked
+# ~/.config/herdr path, which is where herdr.sock lives.
+CONFIG_DIR=$(cd "${0%/*}/.." && pwd)
+HOME_DIR=$(cd "$CONFIG_DIR/../.." && pwd)
+
+find_bin() {
+  for d in "$HOME_DIR/.local/bin" /opt/homebrew/bin /usr/local/bin /usr/bin /bin; do
+    [ -x "$d/$1" ] && { echo "$d/$1"; return; }
+  done
+}
+HERDR=$(find_bin herdr)
+JQ=$(find_bin jq)
 LOG=$CONFIG_DIR/herdr-nav.log
 
 # Without HOME the herdr CLI resolves its socket under TMPDIR and reports

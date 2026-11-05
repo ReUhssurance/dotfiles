@@ -1,4 +1,4 @@
-# wt — git worktree wrapper with numeric indices
+# wt — git worktree wrapper with numeric indices (works in bash and zsh)
 #
 #   wt                 list worktrees with indices
 #   wt list            same (also: wt ls)
@@ -22,60 +22,57 @@ _wt_table() {
   '
 }
 
+_wt_isnum() {
+  case $1 in
+    ''|*[!0-9]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 _wt_path_at() {
-  local -a rows
-  rows=("${(@f)$(_wt_table)}")
-  local idx=$1
-  (( idx < 0 || idx >= ${#rows} )) && return 1
-  print -r -- "${${(@s:	:)rows[idx+1]}[1]}"
+  _wt_table | awk -F'\t' -v i="$1" 'NR==i+1 { print $1; f=1 } END { exit !f }'
 }
 
 _wt_list() {
-  local -a rows
-  rows=("${(@f)$(_wt_table)}")
   local here
   here=$(git rev-parse --show-toplevel 2>/dev/null)
-  local i=0 row wtp branch head mark w=0
-  for row in $rows; do
-    branch="${${(@s:	:)row}[2]}"
-    (( ${#branch} > w )) && w=${#branch}
-  done
-  for row in $rows; do
-    wtp="${${(@s:	:)row}[1]}"
-    branch="${${(@s:	:)row}[2]}"
-    head="${${(@s:	:)row}[3]}"
-    [[ $wtp == $here ]] && mark='*' || mark=' '
-    printf '%s %d  %-*s  %-8s  %s\n' "$mark" $i $w "$branch" "$head" "$wtp"
-    i=$(( i + 1 ))
-  done
-  return 0
+  _wt_table | awk -F'\t' -v here="$here" '
+    { p[NR]=$1; b[NR]=$2; h[NR]=$3; if (length($2) > w) w = length($2) }
+    END {
+      fmt = "%s %d  %-" w "s  %-8s  %s\n"
+      for (i = 1; i <= NR; i++)
+        printf fmt, (p[i]==here ? "*" : " "), i-1, b[i], h[i], p[i]
+    }
+  '
 }
 
 wt() {
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
-    print -u2 "wt: not inside a git repository"
+    echo "wt: not inside a git repository" >&2
     return 1
   fi
 
   local cmd=$1
+  local wtp a here main branch root parent dest slug
+  local -a args
+
+  if _wt_isnum "$cmd"; then
+    if ! wtp=$(_wt_path_at "$cmd"); then
+      echo "wt: no worktree at index $cmd" >&2
+      return 1
+    fi
+    cd -- "$wtp"
+    return
+  fi
 
   case $cmd in
     ''|list|ls)
       _wt_list
       ;;
 
-    <->)
-      local wtp
-      if ! wtp=$(_wt_path_at $cmd); then
-        print -u2 "wt: no worktree at index $cmd"
-        return 1
-      fi
-      cd -- "$wtp"
-      ;;
-
     cd)
       if [[ -z $2 ]]; then
-        print -u2 "wt: usage: wt cd <n>"
+        echo "wt: usage: wt cd <n>" >&2
         return 1
       fi
       wt "$2"
@@ -83,12 +80,11 @@ wt() {
 
     remove|rm)
       shift
-      local -a args
-      local a wtp
+      args=()
       for a in "$@"; do
-        if [[ $a == <-> ]]; then
-          if ! wtp=$(_wt_path_at $a); then
-            print -u2 "wt: no worktree at index $a"
+        if _wt_isnum "$a"; then
+          if ! wtp=$(_wt_path_at "$a"); then
+            echo "wt: no worktree at index $a" >&2
             return 1
           fi
           args+=("$wtp")
@@ -96,21 +92,23 @@ wt() {
           args+=("$a")
         fi
       done
-      local here main
       here=$(git rev-parse --show-toplevel 2>/dev/null)
-      if (( ${args[(I)$here]} )); then
-        main=$(_wt_path_at 0) && cd -- "$main"
-      fi
+      for a in "${args[@]}"; do
+        if [[ $a == "$here" ]]; then
+          main=$(_wt_path_at 0) && cd -- "$main"
+          break
+        fi
+      done
       git worktree remove "${args[@]}"
       ;;
 
     add)
       if [[ $# -eq 2 && $2 != -* && $2 != /* && $2 != .* && ! -e $2 ]]; then
-        local branch=$2 root parent dest slug
+        branch=$2
         root=$(git rev-parse --show-toplevel)
-        parent=${root:h}
+        parent=$(dirname -- "$root")
         slug=${branch//\//-}
-        dest=$parent/${root:t}-$slug
+        dest=$parent/$(basename -- "$root")-$slug
         if git show-ref --verify --quiet "refs/heads/$branch"; then
           git worktree add "$dest" "$branch" || return
         else
@@ -129,17 +127,42 @@ wt() {
   esac
 }
 
-_wt() {
-  local -a subcmds idxs
-  subcmds=(list ls add remove rm move lock unlock prune repair cd)
-  if (( CURRENT == 2 )); then
-    idxs=(${(f)"$(_wt_table | awk '{ printf "%d:%s\n", NR-1, $0 }' | sed 's/\t/ /g')"})
-    _describe -t index 'worktree' idxs
-    _describe -t command 'subcommand' subcmds
-  elif [[ ${words[2]} == (remove|rm|cd|move|lock|unlock) ]]; then
-    idxs=(${(f)"$(_wt_table | awk '{ printf "%d:%s\n", NR-1, $0 }' | sed 's/\t/ /g')"})
-    _describe -t index 'worktree' idxs
-  fi
+# "<n>:<branch> <head> <path>" entries for completion
+_wt_entries() {
+  _wt_table | awk -F'\t' '{ printf "%d:%s %s %s\n", NR-1, $2, $3, $1 }'
 }
 
-compdef _wt wt 2>/dev/null
+if [ -n "$ZSH_VERSION" ]; then
+  _wt() {
+    local -a subcmds idxs
+    local line
+    subcmds=(list ls add remove rm move lock unlock prune repair cd)
+    idxs=()
+    while IFS= read -r line; do idxs+=("$line"); done < <(_wt_entries)
+    if (( CURRENT == 2 )); then
+      _describe -t index 'worktree' idxs
+      _describe -t command 'subcommand' subcmds
+    else
+      case ${words[2]} in
+        remove|rm|cd|move|lock|unlock) _describe -t index 'worktree' idxs ;;
+      esac
+    fi
+  }
+  compdef _wt wt 2>/dev/null
+elif [ -n "$BASH_VERSION" ]; then
+  _wt_complete() {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    local subcmds="list ls add remove rm move lock unlock prune repair cd"
+    local idxs
+    idxs=$(_wt_entries | cut -d: -f1)
+    if (( COMP_CWORD == 1 )); then
+      COMPREPLY=($(compgen -W "$idxs $subcmds" -- "$cur"))
+    else
+      case ${COMP_WORDS[1]} in
+        remove|rm|cd|move|lock|unlock)
+          COMPREPLY=($(compgen -W "$idxs" -- "$cur")) ;;
+      esac
+    fi
+  }
+  complete -F _wt_complete wt
+fi

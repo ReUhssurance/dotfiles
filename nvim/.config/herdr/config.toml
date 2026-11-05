@@ -55,25 +55,25 @@ swap_pane_right = "prefix+}"
 [[keys.command]]
 key = "ctrl+h"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-nav h"
+command = "$HOME/.config/herdr/bin/herdr-nav h"
 description = "Pane left (vim-aware)"
 
 [[keys.command]]
 key = "ctrl+j"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-nav j"
+command = "$HOME/.config/herdr/bin/herdr-nav j"
 description = "Pane down (vim-aware)"
 
 [[keys.command]]
 key = "ctrl+k"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-nav k"
+command = "$HOME/.config/herdr/bin/herdr-nav k"
 description = "Pane up (vim-aware)"
 
 [[keys.command]]
 key = "ctrl+l"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-nav l"
+command = "$HOME/.config/herdr/bin/herdr-nav l"
 description = "Pane right (vim-aware)"
 
 # --- 0-indexed tabs -----------------------------------------------------
@@ -84,73 +84,73 @@ description = "Pane right (vim-aware)"
 [[keys.command]]
 key = "prefix+c"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab new"
+command = "$HOME/.config/herdr/bin/herdr-tab new"
 description = "New tab (0-indexed)"
 
 [[keys.command]]
 key = "prefix+&"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab close"
+command = "$HOME/.config/herdr/bin/herdr-tab close"
 description = "Close tab (0-indexed)"
 
 [[keys.command]]
 key = "prefix+0"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 0"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 0"
 description = "Tab 0"
 
 [[keys.command]]
 key = "prefix+1"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 1"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 1"
 description = "Tab 1"
 
 [[keys.command]]
 key = "prefix+2"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 2"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 2"
 description = "Tab 2"
 
 [[keys.command]]
 key = "prefix+3"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 3"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 3"
 description = "Tab 3"
 
 [[keys.command]]
 key = "prefix+4"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 4"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 4"
 description = "Tab 4"
 
 [[keys.command]]
 key = "prefix+5"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 5"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 5"
 description = "Tab 5"
 
 [[keys.command]]
 key = "prefix+6"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 6"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 6"
 description = "Tab 6"
 
 [[keys.command]]
 key = "prefix+7"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 7"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 7"
 description = "Tab 7"
 
 [[keys.command]]
 key = "prefix+8"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 8"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 8"
 description = "Tab 8"
 
 [[keys.command]]
 key = "prefix+9"
 type = "shell"
-command = "/Users/evantetzlaff/.config/herdr/bin/herdr-tab focus 9"
+command = "$HOME/.config/herdr/bin/herdr-tab focus 9"
 description = "Tab 9"
 
 [ui]

@@ -22,8 +22,23 @@ import sys
 # an environment we do not control. Without PATH a bare "herdr" is not found,
 # and without HOME the CLI resolves its socket under TMPDIR and reports
 # server_not_running — both of which fail silently behind a keypress.
-HERDR = "/Users/evantetzlaff/.local/bin/herdr"
-SOCKET = "/Users/evantetzlaff/.config/herdr/herdr.sock"
+# Locate everything relative to this script rather than hardcoding a home
+# directory, so the same file works on Linux and macOS. abspath does not
+# resolve symlinks, so this stays the ~/.config/herdr path where herdr.sock lives.
+CONFIG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HOME_DIR = os.path.dirname(os.path.dirname(CONFIG_DIR))
+SOCKET = os.path.join(CONFIG_DIR, "herdr.sock")
+
+
+def find_bin(name):
+    for d in (os.path.join(HOME_DIR, ".local/bin"), "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"):
+        path = os.path.join(d, name)
+        if os.access(path, os.X_OK):
+            return path
+    sys.exit(f"herdr-tab: {name} not found")
+
+
+HERDR = find_bin("herdr")
 ENV = {**os.environ, "HERDR_SOCKET_PATH": os.environ.get("HERDR_SOCKET_PATH", SOCKET)}
 
 
