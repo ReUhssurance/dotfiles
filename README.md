@@ -5,8 +5,19 @@
 Uses GNU Stow to symlink configs into place.
 
 ```sh
-stow nvim      # ~/.config/nvim
-stow tmux      # ~/.tmux.conf
+stow nvim       # ~/.config/nvim
+stow tmux       # ~/.tmux.conf
+stow kdbx-sync  # ~/.local/bin/kdbx-sync
+```
+
+### kdbx-sync
+
+Syncs `~/Documents/current.kdbx` with the rclone `gdrive:` remote.
+
+```sh
+kdbx-sync status   # compare local vs remote
+kdbx-sync pull     # merge remote into local
+kdbx-sync push     # upload local to remote
 ```
 
 ### Obsidian templates

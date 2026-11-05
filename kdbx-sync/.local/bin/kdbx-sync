@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Sync ~/Documents/current.kdbx with Google Drive (rclone remote "gdrive:").
+#
+#   kdbx-sync status          compare local vs remote
+#   kdbx-sync pull            merge remote into local (asks DB password)
+#   kdbx-sync pull --replace  overwrite local with remote (no merge)
+#   kdbx-sync push            upload local to Drive (refuses if remote differs unless --force)
+#   kdbx-sync sync            pull (merge), then push
+#
+# Backups: local -> ~/Documents/.kdbx-backups, remote -> gdrive:kdbx-backups
+set -euo pipefail
+
+LOCAL="${KDBX_LOCAL:-$HOME/Documents/current.kdbx}"
+REMOTE_DIR="${KDBX_REMOTE_DIR:-gdrive:}"
+# Extra credentials for keepassxc-cli merge. YUBIKEY is slot[:serial]; set "" to disable.
+YUBIKEY="${KDBX_YUBIKEY-2}"
+KEYFILE="${KDBX_KEYFILE:-}"
+NAME="$(basename "$LOCAL")"
+REMOTE="${REMOTE_DIR}${NAME}"
+LOCAL_BACKUPS="$(dirname "$LOCAL")/.kdbx-backups"
+REMOTE_BACKUPS="${REMOTE_DIR}kdbx-backups"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+
+RCLONE=(rclone --drive-acknowledge-abuse --log-level ERROR)
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+die() { echo "error: $*" >&2; exit 1; }
+
+hash_local()  { sha256sum "$LOCAL" | cut -d' ' -f1; }
+hash_file()   { sha256sum "$1" | cut -d' ' -f1; }
+
+remote_exists() { "${RCLONE[@]}" lsf "$REMOTE" >/dev/null 2>&1 && [[ -n "$("${RCLONE[@]}" lsf "$REMOTE")" ]]; }
+
+fetch_remote() {
+  remote_exists || die "remote file $REMOTE not found"
+  "${RCLONE[@]}" copyto "$REMOTE" "$tmp/remote.kdbx"
+}
+
+remote_epoch() { date -d "$("${RCLONE[@]}" lsjson "$REMOTE" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["ModTime"])')" +%s; }
+remote_mtime() { "${RCLONE[@]}" lsl "$REMOTE" | awk '{print $2" "substr($3,1,8)}'; }
+local_mtime()  { date -r "$LOCAL" '+%Y-%m-%d %H:%M:%S'; }
+
+cmd_status() {
+  [[ -f "$LOCAL" ]] || die "local file $LOCAL not found"
+  fetch_remote
+  echo "local : $(local_mtime)  $(stat -c %s "$LOCAL") bytes"
+  echo "remote: $(remote_mtime)  $(stat -c %s "$tmp/remote.kdbx") bytes"
+  if [[ "$(hash_local)" == "$(hash_file "$tmp/remote.kdbx")" ]]; then
+    echo "in sync"
+  else
+    echo "DIFFERENT (run pull / push / sync)"
+  fi
+}
+
+backup_local() {
+  mkdir -p "$LOCAL_BACKUPS"
+  cp -p "$LOCAL" "$LOCAL_BACKUPS/${NAME%.kdbx}-$STAMP.kdbx"
+  echo "local backup: $LOCAL_BACKUPS/${NAME%.kdbx}-$STAMP.kdbx"
+}
+
+cmd_pull() {
+  local replace=0
+  [[ "${1:-}" == "--replace" ]] && replace=1
+  fetch_remote
+  if [[ ! -f "$LOCAL" ]]; then
+    cp "$tmp/remote.kdbx" "$LOCAL"
+    echo "local missing; downloaded remote"
+    return
+  fi
+  if [[ "$(hash_local)" == "$(hash_file "$tmp/remote.kdbx")" ]]; then
+    echo "already in sync"
+    return
+  fi
+  backup_local
+  if (( replace )); then
+    cp "$tmp/remote.kdbx" "$LOCAL"
+    echo "local replaced with remote"
+  else
+    command -v keepassxc-cli >/dev/null || die "keepassxc-cli not installed (use pull --replace)"
+    echo "merging remote into local (enter DB password${YUBIKEY:+, touch yubikey slot $YUBIKEY})"
+    local args=(--same-credentials)
+    [[ -n "$YUBIKEY" ]] && args+=(--yubikey "$YUBIKEY")
+    [[ -n "$KEYFILE" ]] && args+=(--key-file "$KEYFILE")
+    keepassxc-cli merge "${args[@]}" "$LOCAL" "$tmp/remote.kdbx"
+    echo "merged"
+  fi
+}
+
+cmd_push() {
+  local force=0
+  [[ "${1:-}" == "--force" ]] && force=1
+  [[ -f "$LOCAL" ]] || die "local file $LOCAL not found"
+  if remote_exists; then
+    fetch_remote
+    if [[ "$(hash_local)" == "$(hash_file "$tmp/remote.kdbx")" ]]; then
+      echo "already in sync"
+      return
+    fi
+    # remote newer than local and not yet merged -> could lose changes
+    if (( ! force )) && (( $(remote_epoch) > $(stat -c %Y "$LOCAL") )); then
+      die "remote is newer than local; run 'pull' (merge) first, or push --force"
+    fi
+    "${RCLONE[@]}" copyto "$tmp/remote.kdbx" "$REMOTE_BACKUPS/${NAME%.kdbx}-$STAMP.kdbx"
+    echo "remote backup: $REMOTE_BACKUPS/${NAME%.kdbx}-$STAMP.kdbx"
+  fi
+  "${RCLONE[@]}" copyto "$LOCAL" "$REMOTE"
+  echo "pushed $LOCAL -> $REMOTE"
+}
+
+cmd_sync() {
+  cmd_pull
+  cmd_push --force   # just merged, so local is a superset of remote
+}
+
+case "${1:-}" in
+  status) cmd_status ;;
+  pull)   shift; cmd_pull "$@" ;;
+  push)   shift; cmd_push "$@" ;;
+  sync)   cmd_sync ;;
+  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
